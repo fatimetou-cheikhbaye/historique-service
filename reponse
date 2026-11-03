@@ -1,0 +1,90 @@
+partie A – Du service web au microservice
+A.4 – Question 1. Citez un avantage et un inconvénient de la communication par HTTP entre
+deux microservices.
+Avantage : les deux microservices sont indépendants et peuvent être développés, déployés ou arrêtés
+séparément. Inconvénient : la communication HTTP peut être plus lente qu'un simple appel de méthode Java
+et dépend de la disponibilité du réseau.
+Question 2. Si calcul-service est arrêté, quelles requêtes continuent de fonctionner et
+lesquelles échouent ?
+Les lectures GET /operations et GET /operations/{id}, ainsi que DELETE /operations/{id}, peuvent continuer à
+fonctionner. Les requêtes /calcul, POST /operations et PUT /operations/{id} échouent lorsqu'elles ont besoin
+de calcul-service.
+Question 3. Pourquoi les deux microservices ne peuvent-ils pas écouter sur le même port ?
+Deux applications ne peuvent pas utiliser simultanément le même port sur la même adresse IP. Chaque
+microservice doit donc utiliser un port différent.
+Question 4. Quel code HTTP historique-service doit-il renvoyer lorsqu'il ne parvient pas à
+joindre calcul-service ?
+Il doit renvoyer le code 503 – Service Unavailable, qui indique que le service dépendant est temporairement
+indisponible.
+Partie C – Premier microservice : la somme
+Question C.1. Comparez l'URL du TP2 avec celle du TP3. Quelles parties ont disparu et
+pourquoi ?
+Les parties /RestWebApp et /api ont disparu. Spring Boot démarre avec son propre serveur embarqué et les
+routes sont directement accessibles à partir de la racine de l'application.
+Question C.2. Remplacez GET par POST dans Postman. Quel code obtenez-vous ? Est-ce le
+même qu'au TP2 ?
+On obtient 405 – Method Not Allowed, car cette ressource accepte GET et non POST. Oui, le comportement est
+le même qu'au TP2.
+Partie D – Compléter la calculatrice
+Question D.1. Au TP2, JAX-RS donnait la valeur 0 à un paramètre entier absent. Que fait
+Spring ? Quelle attitude est la plus conforme à REST ?
+Spring renvoie 400 – Bad Request lorsqu'un paramètre obligatoire est absent. Ce comportement est plus
+conforme à REST, car il signale clairement que la requête du client est incorrecte.
+Question D.2. Quels champs contient l'objet JSON des messages d'erreur de Spring ?
+L'objet d'erreur standard contient généralement timestamp (date et heure), status (code HTTP), error
+(description de l'erreur) et path (chemin demandé). Le champ message peut aussi apparaître selon la
+configuration.
+Question D.3. À quelles annotations JAX-RS correspondent @RequestParam et @PathVariable
+? Laquelle utiliser pour lire l'identifiant dans /operations/{id} ?
+@RequestParam correspond à @QueryParam. @PathVariable correspond à @PathParam. Pour lire l'identifiant
+dans /operations/{id}, on utilise @PathVariable.
+Partie E – Échanger des données en JSON
+Question E.1. Les deux textes JSON sont-ils équivalents ? Qui effectue la conversion cette
+fois-ci ?
+Oui. L'ordre des propriétés dans un objet JSON n'a pas d'importance pour le client. La conversion est effectuée
+par Jackson, intégré dans Spring Boot. Au TP2, elle était effectuée par JSON-B.
+Question E.2. Pourquoi la seconde requête est-elle refusée alors que le code de la méthode
+ne mentionne aucun format ?
+Spring Boot utilise Jackson pour convertir automatiquement l'objet en JSON. Lorsque le client demande XML
+avec Accept: application/xml et que ce format n'est pas disponible, Spring renvoie 406 – Not Acceptable.
+Partie F – Second microservice : historique-service
+Question F.1. Pourquoi les lectures continuent-elles de fonctionner alors que calcul-service
+est arrêté ? Une telle situation était-elle possible au TP2 ?
+Les opérations sont déjà enregistrées dans la mémoire de historique-service. Leur lecture ne nécessite donc
+pas calcul-service. Au TP2, calcul et historique se trouvaient dans la même application : on ne pouvait pas
+arrêter uniquement le service de calcul tout en gardant l'historique disponible.
+Question F.2. Que se serait-il passé sans le bloc catch (ResourceAccessException e) ?
+L'exception ne serait pas interceptée. Spring renverrait généralement une erreur 500 – Internal Server Error
+au lieu du statut 503 prévu pour signaler l'indisponibilité du service appelé.
+Questions de synthèse
+Question 1. Pour chaque différence du tableau A.3, indiquez l'étape du TP où vous avez
+observé cette différence.
+Technologie : parties B et C. Découpage : parties A et F. Fichier JAR : partie B. Serveur embarqué : C.5. Port :
+C.4 et F.1. Adresse URL : C.6. Activation : B.4. Ressource REST : C.2. Verbes HTTP : C, D et F. Paramètres : D.4
+et F.5. Réponse HTTP : C et D. Conversion JSON : E. Création des objets et injection de dépendances : C.1 et
+C.2. Communication entre services : F.3.
+Question 3. Décrivez les commandes nécessaires pour construire et lancer les deux
+microservices sans IntelliJ.
+Pour chaque projet, exécuter mvn clean package pour construire le fichier JAR, puis java -jar
+target/nom-du-fichier.jar pour lancer le microservice. calcul-service écoute sur le port 8081 et
+historique-service sur le port 8082. Les deux doivent être démarrés simultanément
+Question 4. Un microservice est-il un service web ? Un service web est-il toujours un
+microservice ?
+Oui, un microservice peut être un service web puisqu'il communique avec d'autres applications via HTTP. Mais
+un service web n'est pas toujours un microservice : il peut appartenir à une application centralisée, comme au
+TP2.
+Question 5. Quel problème pose une adresse de calcul-service écrite dans
+application.properties si l'on lance trois exemplaires ?
+historique-service ne connaît qu'une seule adresse et ne répartit donc pas automatiquement les requêtes
+entre les trois exemplaires. Il faut un mécanisme de découverte de services ou de répartition de charge (load
+balancing).
+Question 6. Pourquoi historique-service qui conserve les opérations ne contredit-il pas le
+principe stateless ?
+Stateless signifie que le serveur ne conserve pas l'état de communication ou la session du client entre deux
+requêtes. historique-service conserve des données métier (les opérations), mais pas la session du client : il
+n'y a donc pas de contradiction.
+Question 7. Comparez l'effet de la répétition de POST et PUT. La réponse est-elle différente
+du TP2 ?
+POST : chaque répétition crée une nouvelle opération avec un nouvel identifiant ; POST n'est pas idempotent.
+PUT : répéter la même modification sur la même ressource donne le même état final ; PUT est idempotent. Ce
+comportement est le même qu'au TP2, car il découle des règles des méthodes HTTP
